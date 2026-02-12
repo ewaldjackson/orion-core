@@ -1,54 +1,34 @@
-Orion Core
+# Orion Core
 
-Decision-first AI backend architecture.
+A **decision-first** AI backend (RAG + confidence + gated generation).
 
-Orion Core is a modular Retrieval-Augmented Generation (RAG) backend designed around explicit confidence scoring and decision gating, not blind generation.
+Orion Core is not a “chat with your docs” demo. It is a backend engine that separates:
+- **Evidence retrieval**
+- **Confidence + decisioning**
+- **Generation**
+so the system can explicitly decide when it should answer vs. when it should refuse or fallback.
 
-It is structured as a production-oriented AI engine rather than a demo chatbot.
+---
 
-Identity
+## Why Orion Exists
 
-Orion Core is a decision-first AI backend:
+Most RAG projects do this:
 
-Retrieval produces structured evidence.
+`retrieve → stuff context → generate → hope`
 
-A decision engine evaluates confidence.
+Orion does this:
 
-Generation is gated by that decision.
+`retrieve → score evidence → decide → generate (only if warranted)`
 
-This architecture prevents unconditional LLM output and makes uncertainty explicit.
+This makes Orion usable as a long-term platform layer where uncertainty is first-class.
 
-Core Principles
+---
 
-Modular backend design
+## Core Output Contract
 
-Clear separation of concerns
+Every request returns a structured decision payload:
 
-Swappable LLM providers
-
-Swappable vector storage
-
-Deterministic decision layer
-
-Explicit output contract
-
-Architecture Overview
-Query
-  ↓
-Retrieve top_k results
-  ↓
-Score + aggregate confidence
-  ↓
-Decision Engine
-  ├── TRUST_CONTEXT → Generate answer
-  ├── NEED_FALLBACK → Trigger fallback hook
-  └── INSUFFICIENT_DATA → Return structured no-evidence response
-
-
-Output Contract
-
-Every response follows this structure:
-
+```json
 {
   "answer": "...",
   "confidence": 0.0,
@@ -57,66 +37,83 @@ Every response follows this structure:
 }
 
 
-This ensures downstream systems can reason about output reliability.
 
-Project Structure
+Decision states:
+
+TRUST_CONTEXT — evidence is sufficient to answer from retrieved context
+
+NEED_FALLBACK — evidence is weak; fallback path should be used
+
+INSUFFICIENT_DATA — no meaningful evidence retrieved
+
+
+Runtime Flow (MVP)
+
+Ingest
+
+folder → chunk → embed → persist (Chroma)
+
+Retrieve
+
+query → top_k chunks (+ scores + metadata)
+
+Decide (Core)
+
+aggregate retrieval scores → confidence
+
+produce decision
+
+Generate (Gated)
+
+only runs when decision == TRUST_CONTEXT
+
+Fallback Hook
+
+interface exists in MVP (stub)
+
+becomes real in later phases (web, tools, agents)
+
+
+Architecture: Modules
 app/
-  ingestion/    → document loading, chunking, embeddings
-  retrieval/    → vector search + scoring
-  llm/          → generation layer (LLM wrapper)
-  utils/        → logging + helpers
-  schemas/      → API models
+  ingestion/     # folder ingest, chunking, embeddings
+  retrieval/     # vector search + scoring + fallback hook
+  llm/           # generation wrapper + prompt templates
+  schemas/       # request/response contracts
+  utils/         # logging + helpers
 
-data/chroma/    → persistent vector storage
-tests/          → unit tests (scaffold)
-scripts/        → development utilities
+data/chroma/     # persisted vector store
+tests/           # test scaffold (ingest/retrieve/score)
+scripts/         # dev + ingestion helpers
 
-Dockerfile
-docker-compose.yml
-requirements.txt
-ARCHITECTURE.md
 
-MVP Scope (v0.1)
+Orion is designed to be:
 
-Folder ingestion → chunk → embed → store
+LLM-agnostic
 
-Retrieval (top_k results)
+Vector-store agnostic
 
-Confidence scoring
+deployable to local, VM, or container/serverless
 
-Decision engine (3 states)
 
-Gated generation
+What Makes This Stand Out
 
-Fallback hook (stub)
+Orion’s differentiator is the Decision Engine.
 
-Structured API endpoint
+Instead of trusting the model, Orion exposes reliability as data:
 
-Development Philosophy
+score evidence
 
-Orion Core is being built:
+quantify confidence
 
-Architecture-first
+decide what to do next
 
-Infrastructure-aware
+This is the foundation for future layers (multi-agent validation, tool use, orchestration).
 
-Version-controlled from day one
 
-As a long-term AI backend platform
+Status
 
-This is not a UI project.
-This is the kernel layer.
+Architecture and MVP scope locked in.
+Implementation begins with ingestion → retrieval → decision engine.
 
-Planned Evolution
-
-Future layers may include:
-
-Multi-agent validation
-
-Adaptive threshold tuning
-
-Self-reflection scoring
-
-Tool orchestration
-
-Distributed deployment support
+See ARCHITECTURE.md for the deeper spec.
