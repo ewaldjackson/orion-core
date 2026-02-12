@@ -117,3 +117,19 @@ Architecture and MVP scope locked in.
 Implementation begins with ingestion → retrieval → decision engine.
 
 See ARCHITECTURE.md for the deeper spec.
+
+
+
+MVP Checklist (v0.1 Kernel)
+
+ Folder ingestion works end-to-end
+
+ Retrieval returns structured evidence objects
+
+ Decision engine outputs confidence + state
+
+ /query returns valid contract every time
+
+ Generation is gated by decision
+
+ Fallback hook exists (stub)
